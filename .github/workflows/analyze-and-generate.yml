@@ -48,7 +48,7 @@ jobs:
           echo "Extracting SonarScanner..."
           unzip sonar-scanner-cli-4.7.0.2747-linux.zip
           mv sonar-scanner-4.7.0.2747-linux sonar-scanner
-          echo "Setting JAVA_HOME for SonarScanner..."
+          echo "Forcing SonarScanner to use Java 17..."
           echo "export JAVA_HOME=$JAVA_HOME" >> sonar-scanner/bin/sonar-scanner
           echo "Adding SonarScanner to PATH..."
           echo "$(pwd)/sonar-scanner/bin" >> $GITHUB_PATH
@@ -62,6 +62,7 @@ jobs:
       # Ejecutar análisis en SonarCloud
       - name: SonarCloud Analysis
         env:
+          JAVA_HOME: $JAVA_HOME
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           sonar-scanner \
