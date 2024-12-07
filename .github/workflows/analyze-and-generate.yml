@@ -1,17 +1,17 @@
-name: Analyze and Generate Annotations
+name: Analyze and Publish Package
 
 on:
   push:
     branches:
-      - main
-  workflow_dispatch:
+      - main  # Ejecutar en la rama principal
+  workflow_dispatch:  # Permite ejecución manual del pipeline
 
 jobs:
   analyze:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout del repositorio
+      # Configurar el repositorio
       - name: Checkout repository
         uses: actions/checkout@v3
 
@@ -27,17 +27,6 @@ jobs:
         run: |
           java -version
           echo "JAVA_HOME is set to: $JAVA_HOME"
-
-      # Configurar Python
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.9"
-
-      # Instalar dependencias necesarias
-      - name: Install Dependencies
-        run: |
-          python -m pip install pytest pytest-cov
 
       # Descargar e instalar SonarScanner
       - name: Install SonarScanner
@@ -67,3 +56,50 @@ jobs:
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.python.coverage.reportPaths=coverage-reports/coverage.xml \
             -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+
+  publish:
+    needs: analyze  # Depende del job anterior
+    runs-on: ubuntu-latest
+
+    steps:
+      # Configurar el repositorio
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Configurar Python
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
+
+      # Instalar dependencias necesarias
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade setuptools wheel twine
+          echo "::notice title=Dependencies Installed 📦::Dependencies for publishing installed successfully."
+
+      # Construir el paquete
+      - name: Build Package
+        run: |
+          python setup.py sdist bdist_wheel
+          echo "::notice title=Package Built 🚀::Package built successfully."
+
+      # Publicar el paquete en PyPI
+      - name: Publish to PyPI
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+        run: |
+          twine upload dist/*
+          echo "::notice title=Package Published 🏗️::The package has been successfully published to PyPI."
+
+      # Generar anotación final
+      - name: Generate Final Annotation
+        run: |
+          echo "::notice title=Pipeline Summary::$(cat <<EOF
+          | Step                | Status  | Version Published |
+          |---------------------|---------|-------------------|
+          | 🔍 SonarCloud Check | ✅ Passed |                   |
+          | 📦 Publish Package  | ✅ Passed | $(python setup.py --version) |
+          EOF
+          )"
