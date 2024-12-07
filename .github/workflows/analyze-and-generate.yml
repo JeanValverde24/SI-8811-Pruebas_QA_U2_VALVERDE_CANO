@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: SonarQube and Publish with Annotations
 
 on:
   push:
@@ -8,71 +8,79 @@ on:
     types: [opened, synchronize, reopened]
 
 jobs:
-  build-and-test:
-    name: Build, Test, and Publish
+  sonar-analysis:
+    name: SonarQube Analysis
     runs-on: ubuntu-latest
-
     steps:
-      # Step 1: Checkout code
+      # Checkout the repository
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Required for SonarCloud analysis
+          fetch-depth: 0 # Required for SonarQube to analyze the full history
 
-      # Step 2: Setup Python environment
-      - name: Set up Python
+      # Install Java (required for SonarQube scanner)
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+
+      # Run SonarQube Analysis
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Required for PR decoration
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      # Generate Annotations Summary
+      - name: Generate Annotations Summary
+        run: |
+          # Parse SonarQube results for annotations
+          if [ -f .scannerwork/report-task.sarif ]; then
+            echo "### SonarQube Analysis Report" > annotations.md
+            echo "| Issue Type | Severity | Description |" >> annotations.md
+            echo "|------------|----------|-------------|" >> annotations.md
+            grep -oP '"ruleId":.*?[^\\]",|"message":.*?[^\\]"' .scannerwork/report-task.sarif | \
+            awk 'NR%2{printf "| `%s` ", substr($0, 11, length($0)-12); next} {printf "| %s |\n", substr($0, 12, length($0)-12)}' >> annotations.md
+          else
+            echo "SonarQube analysis did not produce a SARIF report."
+          fi
+
+      # Post annotations summary as a comment
+      - name: Post Annotations to PR
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v3
+        with:
+          path: annotations.md
+
+  publish-package:
+    name: Publish Package
+    needs: sonar-analysis # Only run if SonarQube analysis completes
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout the repository
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Setup Python for package creation
+      - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
 
-      # Step 3: Install dependencies
+      # Install dependencies
       - name: Install Dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install --upgrade setuptools wheel twine
 
-      # Step 4: Run tests
-      - name: Run Tests
-        run: |
-          pytest --junitxml=test-results.xml
-        env:
-          CI: true
-
-      # Step 5: Publish test results
-      - name: Publish Test Results
-        uses: actions/upload-artifact@v3
-        with:
-          name: test-results
-          path: test-results.xml
-
-      # Step 6: Run SonarQube Scan
-      - name: SonarCloud Analysis
-        uses: SonarSource/sonarqube-scan-action@v4
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
-      # Step 7: Build the package
+      # Build the package
       - name: Build Package
         run: |
           python setup.py sdist bdist_wheel
 
-      # Step 8: Publish to PyPI
-      - name: Publish Package to PyPI
-        uses: pypa/gh-action-pypi-publish@v1.8.6
-        with:
-          password: ${{ secrets.PYPI_API_TOKEN }}
-
-      # Step 9: Post Pipeline Summary
-      - name: Pipeline Summary
+      # Publish the package
+      - name: Publish to PyPI
+        env:
+          TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
         run: |
-          echo "## 📝 Pipeline Summary Table" >> $GITHUB_STEP_SUMMARY
-          echo "| Step                          | Status          |" >> $GITHUB_STEP_SUMMARY
-          echo "|-------------------------------|-----------------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Repository Checkout           | ✅ Done         |" >> $GITHUB_STEP_SUMMARY
-          echo "| Python Setup                  | ✅ Done         |" >> $GITHUB_STEP_SUMMARY
-          echo "| Dependencies Installed        | ✅ Done         |" >> $GITHUB_STEP_SUMMARY
-          echo "| Tests                         | ✅ Done         |" >> $GITHUB_STEP_SUMMARY
-          echo "| SonarCloud Analysis           | ✅ Done         |" >> $GITHUB_STEP_SUMMARY
-          echo "| Package Build                 | ✅ Done         |" >> $GITHUB_STEP_SUMMARY
-          echo "| PyPI Publish                  | ✅ Done         |" >> $GITHUB_STEP_SUMMARY
+          twine upload dist/*
