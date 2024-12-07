@@ -18,14 +18,18 @@ jobs:
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
+
       - name: Setup Python
         uses: actions/setup-python@v2
         with:
           python-version: "3.9"
+
       - name: Install tox and any other packages
         run: pip install tox
+
       - name: Run tox
         run: tox -e py
+
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v4
         env:
@@ -81,3 +85,4 @@ jobs:
             echo "| Dependencies Installed        | ❌ Failed       | ⭐              |" >> $GITHUB_STEP_SUMMARY
             echo "| Package Build                 | ❌ Failed       | ⭐              |" >> $GITHUB_STEP_SUMMARY
             echo "| Upload to PyPI                | ❌ Failed       | ⭐              |" >> $GITHUB_STEP_SUMMARY
+          fi
