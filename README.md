@@ -4,7 +4,7 @@
 **TeamWebQaUPT** es un paquete disenado para realizar pruebas automatizadas de interfaces web utilizando Selenium y pytest.  
 Proporciona herramientas reutilizables y faciles de usar para simplificar el proceso de pruebas.
 
-# Novedades en la Versión 1.1.25 de TeamWebQaUPT
+# Novedades en la Versión 1.1.26 de TeamWebQaUPT
 
 **TeamWebQaUPT** ha sido actualizado para incluir mejoras significativas y nuevas funcionalidades que amplían las capacidades del paquete y simplifican las pruebas automatizadas en diversas plataformas.
 
