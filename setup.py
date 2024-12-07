@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="TeamWebQaUPT",
-    version="1.1.24",
+    version="1.1.25",
     description="Paquete para pruebas automatizadas de interfaces web",
     long_description=long_description,
     long_description_content_type="text/markdown",
