@@ -1,0 +1,35 @@
+name: Publish Python Package
+
+on:
+  workflow_dispatch:  # Se ejecutará manualmente, después del análisis
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel twine
+          echo "::notice title=Dependencies Installed 📦::Dependencies installed successfully."
+
+      - name: Build package
+        run: |
+          python setup.py sdist bdist_wheel
+          echo "::notice title=Package Built 🚀::Package built successfully and is ready for upload."
+
+      - name: Publish to PyPI
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+        run: |
+          twine upload dist/*
+          echo "::notice title=Package Published 🏗️::The package has been successfully published to PyPI."
