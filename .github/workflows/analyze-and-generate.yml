@@ -1,64 +1,82 @@
-name: Build and Publish
+name: Build, Analyze, and Publish
 
 on:
   push:
     branches:
       - main
     tags:
-      - "v*" # Este workflow se ejecutará cuando se haga un push a main o a un tag que comience con "v"
+      - "v*" # Se ejecutará también al empujar un tag que comience con "v"
   pull_request:
     types: [opened, synchronize, reopened]
 
 jobs:
   sonarqube:
-    name: SonarQube Cloud
+    name: SonarQube Analysis
     runs-on: ubuntu-latest
     steps:
+      # Verificar el código fuente
       - name: Checkout repository
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
 
+      # Configurar Python
       - name: Setup Python
         uses: actions/setup-python@v2
         with:
           python-version: "3.9"
 
-      - name: Install tox and any other packages
+      # Instalar tox para pruebas
+      - name: Install tox
         run: pip install tox
 
+      # Ejecutar pruebas con tox
       - name: Run tox
         run: tox -e py
 
-      - name: SonarQube Scan
+      # Ejecutar SonarQube Scan
+      - name: Run SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v4
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: "https://sonarcloud.io"
+          SONAR_SCANNER_OPTS: "-Xmx1024m"
+        with:
+          args: >
+            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}
+            -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
+            -Dsonar.sources=.
+            -Dsonar.host.url=https://sonarcloud.io
 
   publish:
     name: Publish Python Package
     runs-on: ubuntu-latest
-    if: github.ref_type == 'tag' # Solo ejecuta este job si se realiza un push de un tag
+    if: github.ref_type == 'tag' # Ejecutar solo si se realiza un push de un tag
 
     steps:
+      # Verificar el código fuente
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      # Configurar Python
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.9"
 
+      # Instalar herramientas de empaquetado
       - name: Install packaging tools
         run: |
           python -m pip install --upgrade pip setuptools wheel twine
           echo "::notice title=Dependencies Installed 📦::Packaging tools installed successfully (pip, setuptools, wheel, twine)."
 
+      # Construir el paquete
       - name: Build package
         run: |
           python setup.py sdist bdist_wheel
           echo "::notice title=Package Build 🚀::Package built successfully and is ready for upload."
 
+      # Publicar en PyPI
       - name: Publish to PyPI
         env:
           TWINE_USERNAME: __token__
@@ -68,7 +86,7 @@ jobs:
           echo "::notice title=Upload Success ✅::The package has been successfully uploaded to PyPI."
 
       - name: Generate summary table
-        if: always() # Ejecuta esta etapa siempre, incluso si el pipeline falla
+        if: always() 
         run: |
           echo "## 📝 Pipeline Summary Table" >> $GITHUB_STEP_SUMMARY
           echo "| Step                          | Status          | Rating         |" >> $GITHUB_STEP_SUMMARY
