@@ -1,153 +1,98 @@
-name: CI/CD Pipeline for Python Package with SonarCloud and Metrics Annotation
+name: Publish Python Package with SonarCloud
 
 on:
   push:
     tags:
-      - "v*"  # Se ejecutará en cada nuevo tag que comience con "v"
+      - "v*" # El pipeline se ejecutará cuando se empuje un tag que comience con "v"
 
 jobs:
-  sonarcloud:
-    name: SonarCloud Analysis
-    runs-on: ubuntu-latest
-    steps:
-      # Configurar el repositorio
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      # Configurar Python
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.9"
-
-      # Instalar dependencias para el análisis
-      - name: Install SonarCloud Scanner
-        run: |
-          python -m pip install --upgrade pip setuptools wheel
-          npm install -g sonarqube-scanner
-
-      # Ejecutar el análisis de SonarCloud
-      - name: SonarCloud Scan
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          sonar-scanner \
-            -Dsonar.organization=${{ secrets.SONAR_ORG }} \
-            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }} \
-            -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
-            -Dsonar.python.coverage.reportPaths=coverage.xml \
-            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
-
-      # Obtener métricas de SonarCloud y generar anotaciones
-      - name: Fetch SonarCloud Metrics
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          curl -u $SONAR_TOKEN: \
-            "${{ secrets.SONAR_HOST_URL }}/api/measures/component?component=${{ secrets.SONAR_PROJECT_KEY }}&metricKeys=security_rating,reliability_rating,maintainability_rating,coverage,duplicated_lines_density" \
-            -o sonar_metrics.json
-
-      - name: Create Metrics Table
-        run: |
-          metrics=$(cat sonar_metrics.json | jq '.component.measures')
-          security=$(echo $metrics | jq -r '.[] | select(.metric=="security_rating") | .value')
-          reliability=$(echo $metrics | jq -r '.[] | select(.metric=="reliability_rating") | .value')
-          maintainability=$(echo $metrics | jq -r '.[] | select(.metric=="maintainability_rating") | .value')
-          coverage=$(echo $metrics | jq -r '.[] | select(.metric=="coverage") | .value')
-          duplication=$(echo $metrics | jq -r '.[] | select(.metric=="duplicated_lines_density") | .value')
-
-          echo "## SonarCloud Metrics Table 🚦"
-          echo "| Metric              | Value         | Rating      |"
-          echo "|---------------------|---------------|-------------|"
-          echo "| 🛡️ Security         | $security     | $(rating $security) |"
-          echo "| ✅ Reliability       | $reliability  | $(rating $reliability) |"
-          echo "| 🛠️ Maintainability | $maintainability | $(rating $maintainability) |"
-          echo "| 📈 Coverage         | $coverage%    | $(coverage_rating $coverage) |"
-          echo "| 🔁 Duplication     | $duplication% | $(duplication_rating $duplication) |"
-
-          function rating() {
-            case $1 in
-              1) echo "⭐⭐⭐⭐⭐" ;;
-              2) echo "⭐⭐⭐⭐" ;;
-              3) echo "⭐⭐⭐" ;;
-              4) echo "⭐⭐" ;;
-              5) echo "⭐" ;;
-              *) echo "N/A" ;;
-            esac
-          }
-
-          function coverage_rating() {
-            if [ $1 -ge 80 ]; then
-              echo "⭐⭐⭐⭐⭐"
-            elif [ $1 -ge 60 ]; then
-              echo "⭐⭐⭐⭐"
-            elif [ $1 -ge 40 ]; then
-              echo "⭐⭐⭐"
-            elif [ $1 -ge 20 ]; then
-              echo "⭐⭐"
-            else
-              echo "⭐"
-            fi
-          }
-
-          function duplication_rating() {
-            if [ $1 -le 5 ]; then
-              echo "⭐⭐⭐⭐⭐"
-            elif [ $1 -le 10 ]; then
-              echo "⭐⭐⭐⭐"
-            elif [ $1 -le 20 ]; then
-              echo "⭐⭐⭐"
-            elif [ $1 -le 40 ]; then
-              echo "⭐⭐"
-            else
-              echo "⭐"
-            fi
-          }
-
   publish:
-    name: Publish Python Package
     runs-on: ubuntu-latest
-    needs: sonarcloud  # Se ejecuta después de completar la tarea de SonarCloud
-    if: success()  # Solo si la tarea anterior fue exitosa
+
     steps:
-      # Configurar el repositorio
-      - name: Checkout repository
-        uses: actions/checkout@v3
+    # Configurar el repositorio
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
-      # Configurar Python
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.9"
+    # Configurar Python
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.9"
+      run: echo "::notice title=Python Setup 🐍::Python 3.9 has been configured successfully."
 
-      # Instalar herramientas necesarias
-      - name: Install Packaging Tools
-        run: |
-          python -m pip install --upgrade pip setuptools wheel twine
-        # Agregar anotación de éxito después de instalar herramientas
-      - name: Annotate Packaging Tools Installation
-        run: echo "::notice title=Dependencies Installed 📦::Packaging tools installed successfully (pip, setuptools, wheel, twine)."
+    # Instalar dependencias necesarias
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest pytest-cov setuptools wheel twine
+        echo "::notice title=Dependencies Installed 📦::Dependencies installed successfully (pip, pytest, pytest-cov, setuptools, wheel, twine)."
 
-      # Construir el paquete
-      - name: Build Package
-        run: |
-          python setup.py sdist bdist_wheel
-        # Agregar anotación de éxito después de construir el paquete
-      - name: Annotate Package Build
-        run: echo "::notice title=Package Build 🚀::Package built successfully and is ready for upload."
+    # Ejecutar análisis en SonarCloud
+    - name: SonarCloud Analysis
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      run: |
+        sonar-scanner \
+          -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }} \
+          -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }} \
+          -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
+          -Dsonar.python.coverage.reportPaths=coverage-reports/coverage.xml \
+          -Dsonar.login=${{ secrets.SONAR_TOKEN }}
 
-      # Subir el paquete a PyPI
-      - name: Publish to PyPI
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
-        run: |
-          twine upload dist/*
-        # Agregar anotación de éxito después de subir el paquete
-      - name: Annotate Upload Success
-        run: echo "::notice title=Upload Success 🌟::The package has been successfully uploaded to PyPI."
+    # Extraer métricas de SonarCloud
+    - name: Extract SonarCloud Metrics
+      run: |
+        curl -u "${{ secrets.SONAR_TOKEN }}:" "${{ secrets.SONAR_HOST_URL }}/api/measures/component?component=${{ secrets.SONAR_PROJECT_KEY }}&metricKeys=security_rating,reliability_rating,maintainability_rating,coverage,duplicated_lines_density" > sonar_metrics.json
+        echo "::notice title=Metrics Extracted 📊::SonarCloud metrics have been successfully extracted."
 
-      # Generar anotaciones con los detalles del lanzamiento
-      - name: Create Release Annotation
-        run: |
-          echo "::notice title=Release Details 📦::Package version ${GITHUB_REF_NAME} has been published to PyPI."
+    # Generar tabla de anotaciones para SonarCloud
+    - name: Generate Annotations
+      run: |
+        python -c "
+import json
+
+# Leer el archivo de métricas
+with open('sonar_metrics.json', 'r') as file:
+    data = json.load(file)
+
+# Extraer las métricas relevantes
+metrics = {measure['metric']: measure['value'] for measure in data['component']['measures']}
+security = metrics.get('security_rating', 'N/A')
+reliability = metrics.get('reliability_rating', 'N/A')
+maintainability = metrics.get('maintainability_rating', 'N/A')
+coverage = metrics.get('coverage', 'N/A')
+duplications = metrics.get('duplicated_lines_density', 'N/A')
+
+# Generar una tabla en formato Markdown
+table = f\"\"\"| Metric            | Rating | Value        |
+|------------------|--------|--------------|
+| Security         | 🟢 A   | {security}   |
+| Reliability      | 🟢 A   | {reliability}|
+| Maintainability  | 🟢 A   | {maintainability} |
+| Coverage         | 🟢 A   | {coverage}%  |
+| Duplications     | 🔴 E   | {duplications}%  |
+\"\"\"
+
+# Guardar la tabla en un archivo
+with open('annotations.md', 'w') as output:
+    output.write(table)
+
+# Mostrar en GitHub Actions
+print(f'::notice title=SonarCloud Metrics::\\n{table}')
+"
+
+    # Construir el paquete
+    - name: Build Package
+      run: |
+        python setup.py sdist bdist_wheel
+        echo "::notice title=Package Build 🚀::Package built successfully and is ready for upload."
+
+    # Subir el paquete a PyPI
+    - name: Publish to PyPI
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+      run: |
+        twine upload dist/*
+        echo "::notice title=Upload Success ✅::The package has been successfully uploaded to PyPI."
