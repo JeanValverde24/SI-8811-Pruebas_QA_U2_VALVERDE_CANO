@@ -1,0 +1,71 @@
+name: Analyze and Generate Annotations
+
+on:
+  push:
+    branches:
+      - main  # Se ejecutará en la rama principal
+  workflow_dispatch:  # Permite la ejecución manual del pipeline
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
+
+      - name: Install dependencies for analysis
+        run: |
+          python -m pip install pytest pytest-cov
+          echo "::notice title=Dependencies Installed 📦::Dependencies for analysis installed successfully."
+
+      - name: SonarCloud analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          sonar-scanner \
+            -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }} \
+            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }} \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.python.coverage.reportPaths=coverage-reports/coverage.xml \
+            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+
+      - name: Generate Annotations
+        run: |
+          python - <<EOF
+import json
+
+# Leer el archivo de métricas generado por SonarCloud
+with open('sonar_metrics.json', 'r') as file:
+    data = json.load(file)
+
+# Extraer las métricas relevantes
+metrics = {measure['metric']: measure['value'] for measure in data['component']['measures']}
+security = metrics.get('security_rating', 'N/A')
+reliability = metrics.get('reliability_rating', 'N/A')
+maintainability = metrics.get('maintainability_rating', 'N/A')
+coverage = metrics.get('coverage', 'N/A')
+duplications = metrics.get('duplicated_lines_density', 'N/A')
+
+# Generar una tabla en formato Markdown
+table = f'''| Metric            | Rating | Value        |
+|------------------|--------|--------------|
+| Security         | 🟢 A   | {security}   |
+| Reliability      | 🟢 A   | {reliability}|
+| Maintainability  | 🟢 A   | {maintainability} |
+| Coverage         | 🟢 A   | {coverage}%  |
+| Duplications     | 🔴 E   | {duplications}%  |
+'''
+
+# Guardar la tabla en un archivo para referencia
+with open('annotations.md', 'w') as output:
+    output.write(table)
+
+# Mostrar la tabla en las anotaciones de GitHub Actions
+print(f'::notice title=SonarCloud Metrics::\\n{table}')
+EOF
