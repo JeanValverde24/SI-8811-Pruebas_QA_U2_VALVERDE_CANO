@@ -1,83 +1,83 @@
-name: Publish Python Package with SonarCloud Analysis
+name: Build and Publish
 
 on:
   push:
+    branches:
+      - main
     tags:
-      - "v*"  
+      - "v*" # Este workflow se ejecutará cuando se haga un push a main o a un tag que comience con "v"
+  pull_request:
+    types: [opened, synchronize, reopened]
 
 jobs:
-  analyze_and_publish:
+  sonarqube:
+    name: SonarQube Cloud
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: "3.9"
+      - name: Install tox and any other packages
+        run: pip install tox
+      - name: Run tox
+        run: tox -e py
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v4
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  publish:
+    name: Publish Python Package
+    runs-on: ubuntu-latest
+    if: github.ref_type == 'tag' # Solo ejecuta este job si se realiza un push de un tag
 
     steps:
-    # Configurar el repositorio
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    # Configurar Java 17 para SonarCloud
-    - name: Setup Java 17
-      uses: actions/setup-java@v3
-      with:
-        java-version: '17'
-        distribution: 'temurin'
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
 
-    # Ejecutar análisis en SonarCloud
-    - name: SonarCloud Analysis
-      env:
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      run: |
-        sonar-scanner \
-          -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }} \
-          -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }} \
-          -Dsonar.host.url=https://sonarcloud.io \
-          -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+      - name: Install packaging tools
+        run: |
+          python -m pip install --upgrade pip setuptools wheel twine
+          echo "::notice title=Dependencies Installed 📦::Packaging tools installed successfully (pip, setuptools, wheel, twine)."
 
-    # Configurar Python
-    - name: Setup Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.9"
-      
-    # Instalar herramientas necesarias para la publicación
-    - name: Install packaging tools
-      run: |
-        python -m pip install --upgrade pip setuptools wheel twine
-        echo "::notice title=Dependencies Installed 📦::Packaging tools installed successfully (pip, setuptools, wheel, twine)."
+      - name: Build package
+        run: |
+          python setup.py sdist bdist_wheel
+          echo "::notice title=Package Build 🚀::Package built successfully and is ready for upload."
 
-    # Construir el paquete
-    - name: Build package
-      run: |
-        python setup.py sdist bdist_wheel
-        echo "::notice title=Package Build 🚀::Package built successfully and is ready for upload."
+      - name: Publish to PyPI
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+        run: |
+          twine upload dist/*
+          echo "::notice title=Upload Success ✅::The package has been successfully uploaded to PyPI."
 
-    # Subir el paquete a PyPI
-    - name: Publish to PyPI
-      env:
-        TWINE_USERNAME: __token__
-        TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
-      run: |
-        twine upload dist/*
-        echo "::notice title=Upload Success ✅::The package has been successfully uploaded to PyPI."
-
-    # Generar una tabla con los resultados
-    - name: Generate summary table
-      if: always()  # Ejecuta esta etapa siempre, incluso si el pipeline falla
-      run: |
-        echo "## 📝 Pipeline Summary Table" >> $GITHUB_STEP_SUMMARY
-        echo "| Step                          | Status          | Notes          |" >> $GITHUB_STEP_SUMMARY
-        echo "|-------------------------------|-----------------|----------------|" >> $GITHUB_STEP_SUMMARY
-        if [ "${{ job.status }}" == "success" ]; then
-          echo "| Repository Checkout           | ✅ Done         | Completed       |" >> $GITHUB_STEP_SUMMARY
-          echo "| SonarCloud Analysis           | ✅ Passed       | Code Checked    |" >> $GITHUB_STEP_SUMMARY
-          echo "| Python Setup                  | ✅ Done         | Ready           |" >> $GITHUB_STEP_SUMMARY
-          echo "| Dependencies Installed        | ✅ Done         | Tools Ready     |" >> $GITHUB_STEP_SUMMARY
-          echo "| Package Build                 | ✅ Done         | Package Built   |" >> $GITHUB_STEP_SUMMARY
-          echo "| Upload to PyPI                | ✅ Done         | Published       |" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "| Repository Checkout           | ❌ Failed       |                |" >> $GITHUB_STEP_SUMMARY
-          echo "| SonarCloud Analysis           | ❌ Failed       |                |" >> $GITHUB_STEP_SUMMARY
-          echo "| Python Setup                  | ❌ Failed       |                |" >> $GITHUB_STEP_SUMMARY
-          echo "| Dependencies Installed        | ❌ Failed       |                |" >> $GITHUB_STEP_SUMMARY
-          echo "| Package Build                 | ❌ Failed       |                |" >> $GITHUB_STEP_SUMMARY
-          echo "| Upload to PyPI                | ❌ Failed       |                |" >> $GITHUB_STEP_SUMMARY
-        fi
+      - name: Generate summary table
+        if: always() # Ejecuta esta etapa siempre, incluso si el pipeline falla
+        run: |
+          echo "## 📝 Pipeline Summary Table" >> $GITHUB_STEP_SUMMARY
+          echo "| Step                          | Status          | Rating         |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------------------------------|-----------------|----------------|" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "| Repository Checkout           | ✅ Done         | ⭐⭐⭐⭐⭐          |" >> $GITHUB_STEP_SUMMARY
+            echo "| Python Setup                  | ✅ Done         | ⭐⭐⭐⭐⭐          |" >> $GITHUB_STEP_SUMMARY
+            echo "| Dependencies Installed        | ✅ Done         | ⭐⭐⭐⭐⭐          |" >> $GITHUB_STEP_SUMMARY
+            echo "| Package Build                 | ✅ Done         | ⭐⭐⭐⭐⭐          |" >> $GITHUB_STEP_SUMMARY
+            echo "| Upload to PyPI                | ✅ Done         | ⭐⭐⭐⭐⭐          |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Repository Checkout           | ❌ Failed       | ⭐              |" >> $GITHUB_STEP_SUMMARY
+            echo "| Python Setup                  | ❌ Failed       | ⭐              |" >> $GITHUB_STEP_SUMMARY
+            echo "| Dependencies Installed        | ❌ Failed       | ⭐              |" >> $GITHUB_STEP_SUMMARY
+            echo "| Package Build                 | ❌ Failed       | ⭐              |" >> $GITHUB_STEP_SUMMARY
+            echo "| Upload to PyPI                | ❌ Failed       | ⭐              |" >> $GITHUB_STEP_SUMMARY
