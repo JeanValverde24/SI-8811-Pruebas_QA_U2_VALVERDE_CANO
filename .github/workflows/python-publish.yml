@@ -1,9 +1,9 @@
-name: Publish Python Package with SonarCloud
+name: Publish Python Package
 
 on:
   push:
     tags:
-      - "v*" # El pipeline se ejecutará cuando se empuje un tag que comience con "v"
+      - "v*"  # Se ejecuta cuando se empuje un tag que comience con "v"
 
 jobs:
   publish:
@@ -19,34 +19,26 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: "3.9"
-      run: echo "::notice title=Python Setup 🐍::Python 3.9 has been configured successfully."
 
     # Instalar dependencias necesarias
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install pytest pytest-cov setuptools wheel twine
-        echo "::notice title=Dependencies Installed 📦::Dependencies installed successfully (pip, pytest, pytest-cov, setuptools, wheel, twine)."
+        python -m pip install --upgrade pip setuptools wheel twine pytest pytest-cov
+        echo "::notice title=Dependencies Installed 📦::Dependencies installed successfully (pip, setuptools, wheel, twine, pytest, pytest-cov)."
 
     # Ejecutar análisis en SonarCloud
-    - name: SonarCloud Analysis
+    - name: SonarCloud analysis
       env:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       run: |
         sonar-scanner \
           -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }} \
           -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }} \
-          -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
+          -Dsonar.host.url=https://sonarcloud.io \
           -Dsonar.python.coverage.reportPaths=coverage-reports/coverage.xml \
           -Dsonar.login=${{ secrets.SONAR_TOKEN }}
 
-    # Extraer métricas de SonarCloud
-    - name: Extract SonarCloud Metrics
-      run: |
-        curl -u "${{ secrets.SONAR_TOKEN }}:" "${{ secrets.SONAR_HOST_URL }}/api/measures/component?component=${{ secrets.SONAR_PROJECT_KEY }}&metricKeys=security_rating,reliability_rating,maintainability_rating,coverage,duplicated_lines_density" > sonar_metrics.json
-        echo "::notice title=Metrics Extracted 📊::SonarCloud metrics have been successfully extracted."
-
-    # Generar tabla de anotaciones para SonarCloud
+    # Generar tabla de anotaciones
     - name: Generate Annotations
       run: |
         python -c "
@@ -65,14 +57,14 @@ coverage = metrics.get('coverage', 'N/A')
 duplications = metrics.get('duplicated_lines_density', 'N/A')
 
 # Generar una tabla en formato Markdown
-table = f\"\"\"| Metric            | Rating | Value        |
+table = f'''| Metric            | Rating | Value        |
 |------------------|--------|--------------|
 | Security         | 🟢 A   | {security}   |
 | Reliability      | 🟢 A   | {reliability}|
 | Maintainability  | 🟢 A   | {maintainability} |
 | Coverage         | 🟢 A   | {coverage}%  |
 | Duplications     | 🔴 E   | {duplications}%  |
-\"\"\"
+'''
 
 # Guardar la tabla en un archivo
 with open('annotations.md', 'w') as output:
@@ -83,16 +75,16 @@ print(f'::notice title=SonarCloud Metrics::\\n{table}')
 "
 
     # Construir el paquete
-    - name: Build Package
+    - name: Build package
       run: |
         python setup.py sdist bdist_wheel
-        echo "::notice title=Package Build 🚀::Package built successfully and is ready for upload."
+        echo "::notice title=Package Built 🚀::Package built successfully and is ready for upload."
 
-    # Subir el paquete a PyPI
+    # Publicar el paquete en PyPI
     - name: Publish to PyPI
       env:
         TWINE_USERNAME: __token__
         TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
       run: |
         twine upload dist/*
-        echo "::notice title=Upload Success ✅::The package has been successfully uploaded to PyPI."
+        echo "::notice title=Package Published 🏗️::The package has been successfully published to PyPI."
