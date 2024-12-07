@@ -3,15 +3,15 @@ name: Analyze and Generate Annotations
 on:
   push:
     branches:
-      - main  # Se ejecutará en la rama principal
-  workflow_dispatch:  # Permite la ejecución manual del pipeline
+      - main
+  workflow_dispatch:
 
 jobs:
   analyze:
     runs-on: ubuntu-latest
 
     steps:
-      # Configurar el repositorio
+      # Checkout del repositorio
       - name: Checkout repository
         uses: actions/checkout@v3
 
@@ -22,11 +22,11 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      # Verificar versión de Java
-      - name: Verify Java Version
+      # Verificar configuración de Java
+      - name: Verify Java Configuration
         run: |
           java -version
-          echo "JAVA_HOME is set to $JAVA_HOME"
+          echo "JAVA_HOME is set to: $JAVA_HOME"
 
       # Configurar Python
       - name: Setup Python
@@ -34,11 +34,10 @@ jobs:
         with:
           python-version: "3.9"
 
-      # Instalar dependencias necesarias para Python
-      - name: Install Python Dependencies
+      # Instalar dependencias necesarias
+      - name: Install Dependencies
         run: |
           python -m pip install pytest pytest-cov
-          echo "::notice title=Dependencies Installed 📦::Dependencies for analysis installed successfully."
 
       # Descargar e instalar SonarScanner
       - name: Install SonarScanner
@@ -49,17 +48,14 @@ jobs:
           unzip sonar-scanner-cli-4.7.0.2747-linux.zip
           mv sonar-scanner-4.7.0.2747-linux sonar-scanner
           echo "Forcing SonarScanner to use Java 17..."
-          echo "export JAVA_HOME=$JAVA_HOME" >> sonar-scanner/bin/sonar-scanner
-          echo "Adding SonarScanner to PATH..."
+          sed -i "1s|^|export JAVA_HOME=$JAVA_HOME\nexport PATH=\$JAVA_HOME/bin:\$PATH\n|" sonar-scanner/bin/sonar-scanner
           echo "$(pwd)/sonar-scanner/bin" >> $GITHUB_PATH
-          echo "::notice title=SonarScanner Installed 🚀::SonarScanner successfully installed."
 
       # Verificar instalación de SonarScanner
       - name: Verify SonarScanner Installation
-        run: |
-          sonar-scanner --version
+        run: sonar-scanner --version
 
-      # Ejecutar análisis en SonarCloud
+      # Ejecutar análisis de SonarCloud
       - name: SonarCloud Analysis
         env:
           JAVA_HOME: $JAVA_HOME
@@ -71,34 +67,3 @@ jobs:
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.python.coverage.reportPaths=coverage-reports/coverage.xml \
             -Dsonar.login=${{ secrets.SONAR_TOKEN }}
-
-      # Generar tabla de anotaciones
-      - name: Generate Annotations
-        run: |
-          python - <<EOF
-          import json
-          
-          with open('sonar_metrics.json', 'r') as file:
-              data = json.load(file)
-          
-          metrics = {measure['metric']: measure['value'] for measure in data['component']['measures']}
-          security = metrics.get('security_rating', 'N/A')
-          reliability = metrics.get('reliability_rating', 'N/A')
-          maintainability = metrics.get('maintainability_rating', 'N/A')
-          coverage = metrics.get('coverage', 'N/A')
-          duplications = metrics.get('duplicated_lines_density', 'N/A')
-          
-          table = f'''| Metric            | Rating | Value        |
-          |------------------|--------|--------------|
-          | Security         | 🟢 A   | {security}   |
-          | Reliability      | 🟢 A   | {reliability}|
-          | Maintainability  | 🟢 A   | {maintainability} |
-          | Coverage         | 🟢 A   | {coverage}%  |
-          | Duplications     | 🔴 E   | {duplications}%  |
-          '''
-          
-          with open('annotations.md', 'w') as output:
-              output.write(table)
-          
-          print(f'::notice title=SonarCloud Metrics::\\n{table}')
-          EOF
