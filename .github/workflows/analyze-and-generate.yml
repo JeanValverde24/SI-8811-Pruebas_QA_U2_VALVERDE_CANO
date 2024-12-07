@@ -72,11 +72,9 @@ jobs:
           python - <<EOF
           import json
           
-          # Leer el archivo de métricas generado por SonarCloud
           with open('sonar_metrics.json', 'r') as file:
               data = json.load(file)
           
-          # Extraer las métricas relevantes
           metrics = {measure['metric']: measure['value'] for measure in data['component']['measures']}
           security = metrics.get('security_rating', 'N/A')
           reliability = metrics.get('reliability_rating', 'N/A')
@@ -84,7 +82,6 @@ jobs:
           coverage = metrics.get('coverage', 'N/A')
           duplications = metrics.get('duplicated_lines_density', 'N/A')
           
-          # Generar una tabla en formato Markdown
           table = f'''| Metric            | Rating | Value        |
           |------------------|--------|--------------|
           | Security         | 🟢 A   | {security}   |
@@ -94,10 +91,8 @@ jobs:
           | Duplications     | 🔴 E   | {duplications}%  |
           '''
           
-          # Guardar la tabla en un archivo para referencia
           with open('annotations.md', 'w') as output:
               output.write(table)
           
-          # Mostrar la tabla en las anotaciones de GitHub Actions
           print(f'::notice title=SonarCloud Metrics::\\n{table}')
           EOF
