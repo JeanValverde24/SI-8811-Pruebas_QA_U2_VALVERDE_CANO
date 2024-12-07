@@ -15,6 +15,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      # Configurar Java 17
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
       # Configurar Python
       - name: Setup Python
         uses: actions/setup-python@v4
@@ -55,6 +62,7 @@ jobs:
             -Dsonar.python.coverage.reportPaths=coverage-reports/coverage.xml \
             -Dsonar.login=${{ secrets.SONAR_TOKEN }}
 
+      # Generar tabla de anotaciones
       - name: Generate Annotations
         run: |
           python - <<EOF
@@ -62,14 +70,14 @@ jobs:
           
           with open('sonar_metrics.json', 'r') as file:
               data = json.load(file)
-        
+          
           metrics = {measure['metric']: measure['value'] for measure in data['component']['measures']}
           security = metrics.get('security_rating', 'N/A')
           reliability = metrics.get('reliability_rating', 'N/A')
           maintainability = metrics.get('maintainability_rating', 'N/A')
           coverage = metrics.get('coverage', 'N/A')
           duplications = metrics.get('duplicated_lines_density', 'N/A')
-        
+          
           table = f'''| Metric            | Rating | Value        |
           |------------------|--------|--------------|
           | Security         | 🟢 A   | {security}   |
@@ -78,9 +86,9 @@ jobs:
           | Coverage         | 🟢 A   | {coverage}%  |
           | Duplications     | 🔴 E   | {duplications}%  |
           '''
-        
+          
           with open('annotations.md', 'w') as output:
-            output.write(table)
-        
+              output.write(table)
+          
           print(f'::notice title=SonarCloud Metrics::\\n{table}')
           EOF
