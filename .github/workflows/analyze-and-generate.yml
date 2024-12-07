@@ -24,7 +24,9 @@ jobs:
 
       # Verificar versión de Java
       - name: Verify Java Version
-        run: java -version
+        run: |
+          java -version
+          echo "JAVA_HOME is set to $JAVA_HOME"
 
       # Configurar Python
       - name: Setup Python
@@ -46,13 +48,16 @@ jobs:
           echo "Extracting SonarScanner..."
           unzip sonar-scanner-cli-4.7.0.2747-linux.zip
           mv sonar-scanner-4.7.0.2747-linux sonar-scanner
+          echo "Setting JAVA_HOME for SonarScanner..."
+          echo "export JAVA_HOME=$JAVA_HOME" >> sonar-scanner/bin/sonar-scanner
           echo "Adding SonarScanner to PATH..."
           echo "$(pwd)/sonar-scanner/bin" >> $GITHUB_PATH
           echo "::notice title=SonarScanner Installed 🚀::SonarScanner successfully installed."
 
       # Verificar instalación de SonarScanner
       - name: Verify SonarScanner Installation
-        run: sonar-scanner --version
+        run: |
+          sonar-scanner --version
 
       # Ejecutar análisis en SonarCloud
       - name: SonarCloud Analysis
