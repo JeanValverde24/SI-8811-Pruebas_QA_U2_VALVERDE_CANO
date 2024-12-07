@@ -11,19 +11,32 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Configurar el repositorio
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      # Configurar Python
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.9"
 
+      # Instalar dependencias necesarias
       - name: Install dependencies for analysis
         run: |
           python -m pip install pytest pytest-cov
           echo "::notice title=Dependencies Installed 📦::Dependencies for analysis installed successfully."
 
+      # Instalar SonarScanner
+      - name: Install SonarScanner
+        run: |
+          wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.7.0.2747-linux.zip
+          unzip sonar-scanner-cli-4.7.0.2747-linux.zip
+          mv sonar-scanner-4.7.0.2747-linux sonar-scanner
+          echo "export PATH=$PATH:$(pwd)/sonar-scanner/bin" >> $GITHUB_ENV
+          echo "::notice title=SonarScanner Installed 🚀::SonarScanner installed successfully."
+
+      # Ejecutar análisis en SonarCloud
       - name: SonarCloud analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -35,22 +48,22 @@ jobs:
             -Dsonar.python.coverage.reportPaths=coverage-reports/coverage.xml \
             -Dsonar.login=${{ secrets.SONAR_TOKEN }}
 
+      # Generar tabla de anotaciones
       - name: Generate Annotations
         run: |
           python - <<EOF
           import json
-
+        
           with open('sonar_metrics.json', 'r') as file:
               data = json.load(file)
-
-    
+        
           metrics = {measure['metric']: measure['value'] for measure in data['component']['measures']}
           security = metrics.get('security_rating', 'N/A')
           reliability = metrics.get('reliability_rating', 'N/A')
           maintainability = metrics.get('maintainability_rating', 'N/A')
           coverage = metrics.get('coverage', 'N/A')
           duplications = metrics.get('duplicated_lines_density', 'N/A')
-          
+        
           table = f'''| Metric            | Rating | Value        |
           |------------------|--------|--------------|
           | Security         | 🟢 A   | {security}   |
@@ -59,9 +72,9 @@ jobs:
           | Coverage         | 🟢 A   | {coverage}%  |
           | Duplications     | 🔴 E   | {duplications}%  |
           '''
-          
+        
           with open('annotations.md', 'w') as output:
-              output.write(table)
-          
+            output.write(table)
+        
           print(f'::notice title=SonarCloud Metrics::\\n{table}')
           EOF
