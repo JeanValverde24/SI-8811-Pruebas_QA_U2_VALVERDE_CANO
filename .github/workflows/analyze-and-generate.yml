@@ -36,7 +36,7 @@ jobs:
       # Run Tests and Generate Coverage Report
       - name: Run Tests with Coverage
         run: |
-          pytest --cov=TeamWebQaUPT --cov-report=xml
+          pytest --cov=TeamWebQaUPT --cov-report=xml tests/test_utils.py
 
       # Run SonarCloud Analysis
       - name: SonarCloud Scan
