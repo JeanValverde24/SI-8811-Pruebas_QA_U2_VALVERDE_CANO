@@ -1,4 +1,4 @@
-name: SonarCloud and Publish with Annotations
+name: SonarCloud Analysis and Publish to PyPI
 
 on:
   push:
@@ -19,7 +19,20 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0 
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install Dependencies
+        run: |
+          pip install pytest pytest-cov
+
+      - name: Run Tests with Coverage
+        run: |
+          pytest --cov=TeamWebQaUPT --cov-report=xml
 
       - name: SonarCloud Scan
         uses: sonarsource/sonarcloud-github-action@master
@@ -30,30 +43,12 @@ jobs:
           args: >
             -Dsonar.organization=jeanvalverde24
             -Dsonar.projectKey=JeanValverde24_SI-8811-Pruebas_QA_U2_VALVERDE_CANO
+            -Dsonar.sources=TeamWebQaUPT
             -Dsonar.python.coverage.reportPaths=coverage.xml
-
-      - name: Display SonarCloud Results
-        run: |
-          # Replace with the correct CE Task ID URL (you can automate this if needed)
-          TASK_URL="https://sonarcloud.io/api/ce/task?id=AZO77Tm4gjPBDBbYszFP"
-          ANALYSIS_URL=$(curl -s "$TASK_URL" | jq -r '.analysisUrl')
-          echo "Fetching results from $ANALYSIS_URL"
-
-          if [ -n "$ANALYSIS_URL" ]; then
-            METRICS_URL="https://sonarcloud.io/api/measures/component?component=JeanValverde24_SI-8811-Pruebas_QA_U2_VALVERDE_CANO&metricKeys=bugs,vulnerabilities,code_smells,coverage,duplicated_lines_density"
-            RESULTS=$(curl -s "$METRICS_URL")
-            echo "### SonarCloud Analysis Results" > sonar_results.md
-            echo "| Metric            | Value     |" >> sonar_results.md
-            echo "|-------------------|-----------|" >> sonar_results.md
-            echo "$RESULTS" | jq -r '.component.measures[] | "| \(.metric) | \(.value) |"' >> sonar_results.md
-            cat sonar_results.md
-          else
-            echo "Unable to fetch analysis results from SonarCloud."
-          fi
 
   publish-package:
     name: Publish Package
-    needs: sonarcloud-analysis 
+    needs: sonarcloud-analysis
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
