@@ -28,7 +28,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          pip install pytest pytest-cov selenium requests
+          pip install pytest pytest-cov selenium
 
       - name: Run Tests with Coverage
         run: |
@@ -39,20 +39,6 @@ jobs:
         with:
           name: coverage-report
           path: coverage/coverage.xml
-
-      - name: SonarCloud Scan
-        id: sonarcloud-scan
-        uses: sonarsource/sonarcloud-github-action@master
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          args: >
-            -Dsonar.organization=jeanvalverde24
-            -Dsonar.projectKey=JeanValverde24_SI-8811-Pruebas_QA_U2_VALVERDE_CANO
-            -Dsonar.sources=TeamWebQaUPT
-            -Dsonar.python.coverage.reportPaths=coverage/coverage.xml
-            -Dsonar.inclusions=TeamWebQaUPT/webdriver_config.py,TeamWebQaUPT/utils.py
 
       - name: Fetch SonarCloud Metrics
         id: fetch-metrics
@@ -68,10 +54,27 @@ jobs:
           echo "## SonarCloud Metrics" >> $GITHUB_STEP_SUMMARY
           echo "| Metric               | Value   |" >> $GITHUB_STEP_SUMMARY
           echo "|----------------------|---------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Coverage             | $(echo $response | jq -r '.component.measures[] | select(.metric == "coverage").value')% |" >> $GITHUB_STEP_SUMMARY
-          echo "| Security Rating      | $(echo $response | jq -r '.component.measures[] | select(.metric == "security_rating").value') |" >> $GITHUB_STEP_SUMMARY
-          echo "| Reliability Rating   | $(echo $response | jq -r '.component.measures[] | select(.metric == "reliability_rating").value') |" >> $GITHUB_STEP_SUMMARY
-          echo "| Maintainability      | $(echo $response | jq -r '.component.measures[] | select(.metric == "maintainability_rating").value') |" >> $GITHUB_STEP_SUMMARY
+          COVERAGE=$(echo $response | jq -r '.component.measures[] | select(.metric == "coverage").value // "N/A"')
+          SECURITY=$(echo $response | jq -r '.component.measures[] | select(.metric == "security_rating").value // "N/A"')
+          RELIABILITY=$(echo $response | jq -r '.component.measures[] | select(.metric == "reliability_rating").value // "N/A"')
+          MAINTAINABILITY=$(echo $response | jq -r '.component.measures[] | select(.metric == "maintainability_rating").value // "N/A"')
+          echo "| Coverage             | $COVERAGE% |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security Rating      | $SECURITY |" >> $GITHUB_STEP_SUMMARY
+          echo "| Reliability Rating   | $RELIABILITY |" >> $GITHUB_STEP_SUMMARY
+          echo "| Maintainability      | $MAINTAINABILITY |" >> $GITHUB_STEP_SUMMARY
+
+      - name: SonarCloud Scan
+        uses: sonarsource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.organization=jeanvalverde24
+            -Dsonar.projectKey=JeanValverde24_SI-8811-Pruebas_QA_U2_VALVERDE_CANO
+            -Dsonar.sources=TeamWebQaUPT
+            -Dsonar.python.coverage.reportPaths=coverage/coverage.xml
+            -Dsonar.inclusions=TeamWebQaUPT/webdriver_config.py,TeamWebQaUPT/utils.py
 
   publish-package:
     name: Publish Package
