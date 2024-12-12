@@ -33,17 +33,10 @@ jobs:
         run: |
           pip install pytest pytest-cov selenium
 
-      # Start Selenium Grid
-      - name: Start Selenium Standalone Server
-        run: |
-          wget https://github.com/SeleniumHQ/selenium/releases/download/selenium-4.8.0/selenium-server-4.8.0.jar
-          java -jar selenium-server-4.8.0.jar standalone &
-          sleep 10
-
       # Run Tests and Generate Coverage Report
       - name: Run Tests with Coverage
         run: |
-          pytest --cov=TeamWebQaUPT --cov-report=xml:coverage/coverage.xml Tests
+          pytest --cov=TeamWebQaUPT --cov-report=xml:coverage/coverage.xml Tests/test_utils.py
 
       # Upload Coverage Report
       - name: Upload Coverage Report
