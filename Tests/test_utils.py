@@ -1,5 +1,6 @@
 import unittest
 from unittest.mock import MagicMock, patch
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.common.by import By
 from TeamWebQaUPT.utils import (
@@ -17,7 +18,6 @@ class TestUtils(unittest.TestCase):
 
     @patch("selenium.webdriver.support.ui.WebDriverWait.until")
     def test_select_dropdown_option(self, mock_wait):
-        # Mock the dropdown and option elements
         dropdown_mock = MagicMock(spec=WebElement)
         option_mock = MagicMock(spec=WebElement)
         mock_wait.side_effect = [dropdown_mock, option_mock]
@@ -30,7 +30,6 @@ class TestUtils(unittest.TestCase):
 
     @patch("selenium.webdriver.support.ui.WebDriverWait.until")
     def test_validate_elements_in_list_success(self, mock_wait):
-        # Mock the element found
         element_mock = MagicMock(spec=WebElement)
         element_mock.is_displayed.return_value = True
         mock_wait.return_value = element_mock
@@ -40,7 +39,6 @@ class TestUtils(unittest.TestCase):
 
     @patch("selenium.webdriver.support.ui.WebDriverWait.until")
     def test_validate_elements_in_list_not_found(self, mock_wait):
-        # Simulate timeout for element not found
         mock_wait.side_effect = TimeoutException
 
         with self.assertRaises(AssertionError):
@@ -48,9 +46,9 @@ class TestUtils(unittest.TestCase):
 
     @patch("selenium.webdriver.support.ui.WebDriverWait.until")
     def test_navigate_menu(self, mock_wait):
-        # Mock menu navigation
         menu_mock = MagicMock(spec=WebElement)
-        mock_wait.side_effect = [menu_mock]
+        menu_mock.click.return_value = None
+        mock_wait.side_effect = [menu_mock, None]  # Agregar más valores para las llamadas consecutivas
 
         navigate_menu(
             self.driver,
@@ -61,7 +59,6 @@ class TestUtils(unittest.TestCase):
 
     @patch("selenium.webdriver.support.ui.WebDriverWait.until")
     def test_navigate_linklabel(self, mock_wait):
-        # Mock link navigation
         link_mock = MagicMock(spec=WebElement)
         mock_wait.return_value = link_mock
 
@@ -85,7 +82,6 @@ class TestUtils(unittest.TestCase):
 
     @patch("selenium.webdriver.support.ui.WebDriverWait.until")
     def test_search_and_validate_results(self, mock_wait):
-        # Mock search input, button, and result elements
         search_input_mock = MagicMock(spec=WebElement)
         search_button_mock = MagicMock(spec=WebElement)
         result_mock = MagicMock(spec=WebElement)
