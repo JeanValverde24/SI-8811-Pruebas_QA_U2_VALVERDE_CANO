@@ -16,13 +16,11 @@ jobs:
     name: SonarCloud Analysis
     runs-on: ubuntu-latest
     steps:
-      # Checkout the repository
       - name: Checkout Code
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0 # Required for SonarCloud to analyze the full history
+          fetch-depth: 0 
 
-      # Run SonarCloud Analysis
       - name: SonarCloud Scan
         uses: sonarsource/sonarcloud-github-action@master
         env:
@@ -34,53 +32,46 @@ jobs:
             -Dsonar.projectKey=JeanValverde24_SI-8811-Pruebas_QA_U2_VALVERDE_CANO
             -Dsonar.python.coverage.reportPaths=coverage.xml
 
-      # Generate Annotations Summary
-      - name: Generate Annotations Summary
+      - name: Display SonarCloud Results
         run: |
-          # Parse SonarCloud results for annotations
-          if [ -f .scannerwork/report-task.sarif ]; then
-            echo "### SonarCloud Analysis Report" > annotations.md
-            echo "| Issue Type | Severity | Description |" >> annotations.md
-            echo "|------------|----------|-------------|" >> annotations.md
-            grep -oP '"ruleId":.*?[^\\]",|"message":.*?[^\\]"' .scannerwork/report-task.sarif | \
-            awk 'NR%2{printf "| `%s` ", substr($0, 11, length($0)-12); next} {printf "| %s |\n", substr($0, 12, length($0)-12)}' >> annotations.md
-          else
-            echo "SonarCloud analysis did not produce a SARIF report."
-          fi
+          # Replace with the correct CE Task ID URL (you can automate this if needed)
+          TASK_URL="https://sonarcloud.io/api/ce/task?id=AZO77Tm4gjPBDBbYszFP"
+          ANALYSIS_URL=$(curl -s "$TASK_URL" | jq -r '.analysisUrl')
+          echo "Fetching results from $ANALYSIS_URL"
 
-      # Post annotations summary as a comment
-      - name: Post Annotations to PR
-        if: github.event_name == 'pull_request'
-        uses: marocchino/sticky-pull-request-comment@v2
-        with:
-          path: annotations.md
+          if [ -n "$ANALYSIS_URL" ]; then
+            METRICS_URL="https://sonarcloud.io/api/measures/component?component=JeanValverde24_SI-8811-Pruebas_QA_U2_VALVERDE_CANO&metricKeys=bugs,vulnerabilities,code_smells,coverage,duplicated_lines_density"
+            RESULTS=$(curl -s "$METRICS_URL")
+            echo "### SonarCloud Analysis Results" > sonar_results.md
+            echo "| Metric            | Value     |" >> sonar_results.md
+            echo "|-------------------|-----------|" >> sonar_results.md
+            echo "$RESULTS" | jq -r '.component.measures[] | "| \(.metric) | \(.value) |"' >> sonar_results.md
+            cat sonar_results.md
+          else
+            echo "Unable to fetch analysis results from SonarCloud."
+          fi
 
   publish-package:
     name: Publish Package
-    needs: sonarcloud-analysis # Only run if SonarCloud analysis completes
+    needs: sonarcloud-analysis 
     runs-on: ubuntu-latest
     steps:
-      # Checkout the repository
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      # Setup Python for package creation
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
 
-      # Install dependencies
       - name: Install Dependencies
         run: |
           pip install --upgrade setuptools wheel twine
 
-      # Build the package
       - name: Build Package
         run: |
           python setup.py sdist bdist_wheel
 
-      # Publish the package
       - name: Publish to PyPI
         env:
           TWINE_USERNAME: "__token__"
