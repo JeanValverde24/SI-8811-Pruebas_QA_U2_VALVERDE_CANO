@@ -16,36 +16,30 @@ jobs:
     name: SonarCloud Analysis
     runs-on: ubuntu-latest
     steps:
-      # Checkout the repository
       - name: Checkout Code
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
-      # Setup Python
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
 
-      # Install Dependencies
       - name: Install Dependencies
         run: |
           pip install pytest pytest-cov selenium
 
-      # Run Tests and Generate Coverage Report
       - name: Run Tests with Coverage
         run: |
-          pytest --cov=TeamWebQaUPT --cov-report=xml:coverage/coverage.xml Tests/test_utils.py
+          pytest --cov=TeamWebQaUPT --cov-report=xml:coverage/coverage.xml Tests/test_utils.py Tests/test_webdriver_config.py
 
-      # Upload Coverage Report
       - name: Upload Coverage Report
         uses: actions/upload-artifact@v3
         with:
           name: coverage-report
           path: coverage/coverage.xml
 
-      # Run SonarCloud Analysis
       - name: SonarCloud Scan
         uses: sonarsource/sonarcloud-github-action@master
         env:
@@ -56,35 +50,30 @@ jobs:
             -Dsonar.organization=jeanvalverde24
             -Dsonar.projectKey=JeanValverde24_SI-8811-Pruebas_QA_U2_VALVERDE_CANO
             -Dsonar.sources=TeamWebQaUPT
-            -Dsonar.inclusions=TeamWebQaUPT/webdriver_config.py,TeamWebQaUPT/utils.py
             -Dsonar.python.coverage.reportPaths=coverage/coverage.xml
+            -Dsonar.inclusions=TeamWebQaUPT/webdriver_config.py,TeamWebQaUPT/utils.py
 
   publish-package:
-    name: Publish Package to PyPI
+    name: Publish Package
     needs: sonarcloud-analysis
     runs-on: ubuntu-latest
     steps:
-      # Checkout the repository
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      # Setup Python for package creation
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
 
-      # Install dependencies
       - name: Install Dependencies
         run: |
           pip install --upgrade setuptools wheel twine
 
-      # Build the package
       - name: Build Package
         run: |
           python setup.py sdist bdist_wheel
 
-      # Publish the package to PyPI
       - name: Publish to PyPI
         env:
           TWINE_USERNAME: "__token__"
