@@ -1,4 +1,4 @@
-name: SonarQube and Publish with Annotations
+name: SonarCloud and Publish with Annotations
 
 on:
   push:
@@ -8,41 +8,40 @@ on:
     types: [opened, synchronize, reopened]
 
 jobs:
-  sonar-analysis:
-    name: SonarQube Analysis
+  sonarcloud-analysis:
+    name: SonarCloud Analysis
     runs-on: ubuntu-latest
     steps:
       # Checkout the repository
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
         with:
-          fetch-depth: 0 # Required for SonarQube to analyze the full history
+          fetch-depth: 0 # Required for SonarCloud to analyze the full history
 
-      # Install Java (required for SonarQube scanner)
-      - name: Setup Java
-        uses: actions/setup-java@v3
-        with:
-          java-version: '17'
-
-      # Run SonarQube Analysis
-      - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v4
+      # Run SonarCloud Analysis
+      - name: SonarCloud Scan
+        uses: sonarsource/sonarcloud-github-action@master
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Required for PR decoration
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.organization=Jean-Valverde
+            -Dsonar.projectKey=JeanValverde24_SI-8811-Pruebas_QA_U2_VALVERDE_CANO
+            -Dsonar.python.coverage.reportPaths=coverage.xml
 
       # Generate Annotations Summary
       - name: Generate Annotations Summary
         run: |
-          # Parse SonarQube results for annotations
+          # Parse SonarCloud results for annotations
           if [ -f .scannerwork/report-task.sarif ]; then
-            echo "### SonarQube Analysis Report" > annotations.md
+            echo "### SonarCloud Analysis Report" > annotations.md
             echo "| Issue Type | Severity | Description |" >> annotations.md
             echo "|------------|----------|-------------|" >> annotations.md
             grep -oP '"ruleId":.*?[^\\]",|"message":.*?[^\\]"' .scannerwork/report-task.sarif | \
             awk 'NR%2{printf "| `%s` ", substr($0, 11, length($0)-12); next} {printf "| %s |\n", substr($0, 12, length($0)-12)}' >> annotations.md
           else
-            echo "SonarQube analysis did not produce a SARIF report."
+            echo "SonarCloud analysis did not produce a SARIF report."
           fi
 
       # Post annotations summary as a comment
@@ -54,12 +53,12 @@ jobs:
 
   publish-package:
     name: Publish Package
-    needs: sonar-analysis # Only run if SonarQube analysis completes
+    needs: sonarcloud-analysis # Only run if SonarCloud analysis completes
     runs-on: ubuntu-latest
     steps:
       # Checkout the repository
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       # Setup Python for package creation
       - name: Setup Python
