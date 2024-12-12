@@ -19,7 +19,7 @@ class TestWebDriverConfig(unittest.TestCase):
 
         self.assertIn("options", kwargs)
         self.assertIsInstance(kwargs["options"], ChromeOptions)
-        self.assertEqual(kwargs["options"]._capabilities["se:recordVideo"], True)
+        self.assertTrue(kwargs["options"].get_capability("se:recordVideo"))
 
     @patch("selenium.webdriver.Remote")
     def test_get_driver_firefox(self, mock_remote):
@@ -32,7 +32,7 @@ class TestWebDriverConfig(unittest.TestCase):
 
         self.assertIn("options", kwargs)
         self.assertIsInstance(kwargs["options"], FirefoxOptions)
-        self.assertEqual(kwargs["options"]._capabilities["se:recordVideo"], True)
+        self.assertTrue(kwargs["options"].get_capability("se:recordVideo"))
 
     @patch("selenium.webdriver.Remote")
     def test_get_driver_edge(self, mock_remote):
@@ -45,7 +45,7 @@ class TestWebDriverConfig(unittest.TestCase):
 
         self.assertIn("options", kwargs)
         self.assertIsInstance(kwargs["options"], EdgeOptions)
-        self.assertEqual(kwargs["options"]._capabilities["se:recordVideo"], True)
+        self.assertTrue(kwargs["options"].get_capability("se:recordVideo"))
 
     def test_get_driver_invalid_browser(self):
         with self.assertRaises(ValueError):
@@ -61,5 +61,5 @@ class TestWebDriverConfig(unittest.TestCase):
         args, kwargs = mock_remote.call_args
 
         self.assertIn("options", kwargs)
-        self.assertEqual(kwargs["options"]._capabilities["se:name"], "chrome")
-        self.assertTrue(kwargs["options"]._capabilities["se:recordVideo"])
+        self.assertEqual(kwargs["options"].get_capability("se:name"), "chrome")
+        self.assertTrue(kwargs["options"].get_capability("se:recordVideo"))
