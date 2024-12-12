@@ -30,7 +30,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           args: >
-            -Dsonar.organization=Jean-Valverde
+            -Dsonar.organization=jeanvalverde24
             -Dsonar.projectKey=JeanValverde24_SI-8811-Pruebas_QA_U2_VALVERDE_CANO
             -Dsonar.python.coverage.reportPaths=coverage.xml
 
