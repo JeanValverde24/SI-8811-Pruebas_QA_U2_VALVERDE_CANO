@@ -36,7 +36,12 @@ jobs:
       # Run Tests and Generate Coverage Report
       - name: Run Tests with Coverage
         run: |
-          pytest --cov=TeamWebQaUPT --cov-report=xml Tests/test_utils.py
+          pytest --cov=TeamWebQaUPT --cov-report=xml:coverage/coverage.xml Tests/test_utils.py
+
+      # List Files to Verify Coverage Report
+      - name: List Files
+        run: |
+          ls -R coverage/
 
       # Run SonarCloud Analysis
       - name: SonarCloud Scan
@@ -49,7 +54,7 @@ jobs:
             -Dsonar.organization=jeanvalverde24
             -Dsonar.projectKey=JeanValverde24_SI-8811-Pruebas_QA_U2_VALVERDE_CANO
             -Dsonar.sources=TeamWebQaUPT
-            -Dsonar.python.coverage.reportPaths=coverage.xml
+            -Dsonar.python.coverage.reportPaths=coverage/coverage.xml
 
   publish-package:
     name: Publish Package
