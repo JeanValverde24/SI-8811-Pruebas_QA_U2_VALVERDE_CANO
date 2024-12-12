@@ -56,10 +56,11 @@ jobs:
             -Dsonar.organization=jeanvalverde24
             -Dsonar.projectKey=JeanValverde24_SI-8811-Pruebas_QA_U2_VALVERDE_CANO
             -Dsonar.sources=TeamWebQaUPT
+            -Dsonar.inclusions=TeamWebQaUPT/webdriver_config.py,TeamWebQaUPT/utils.py
             -Dsonar.python.coverage.reportPaths=coverage/coverage.xml
 
   publish-package:
-    name: Publish Package
+    name: Publish Package to PyPI
     needs: sonarcloud-analysis
     runs-on: ubuntu-latest
     steps:
@@ -83,7 +84,7 @@ jobs:
         run: |
           python setup.py sdist bdist_wheel
 
-      # Publish the package
+      # Publish the package to PyPI
       - name: Publish to PyPI
         env:
           TWINE_USERNAME: "__token__"
