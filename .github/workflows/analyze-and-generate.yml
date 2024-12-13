@@ -45,10 +45,10 @@ jobs:
         run: |
           SONAR_API_URL="https://sonarcloud.io/api/measures/component"
           PROJECT_KEY="JeanValverde24_SI-8811-Pruebas_QA_U2_VALVERDE_CANO"
-          METRICS="bugs,vulnerabilities,code_smells,coverage,duplicated_lines_density,complexity,ncloc,security_rating,reliability_rating,sqale_rating"
+          METRICS="bugs,vulnerabilities,code_smells,coverage,duplicated_lines_density,complexity,ncloc,cognitive_complexity,comment_lines_density,security_rating,reliability_rating,sqale_rating,development_cost,security_remediation_effort,reliability_remediation_effort,sqale_index,confirmed_issues,effort_to_reach_maintainability_rating_a"
 
           RESPONSE=$(curl -s -u $SONAR_TOKEN: "$SONAR_API_URL?component=$PROJECT_KEY&metricKeys=$METRICS")
-          echo "SonarCloud Response: $RESPONSE"
+          echo "SonarCloud API Response: $RESPONSE"
 
           echo "response=$RESPONSE" >> $GITHUB_ENV
 
@@ -58,6 +58,7 @@ jobs:
           echo "| Metric               | Value   | Icon       |" >> $GITHUB_STEP_SUMMARY
           echo "|----------------------|---------|------------|" >> $GITHUB_STEP_SUMMARY
 
+          # Parse metrics from the API response
           COVERAGE=$(echo $response | jq -r '.component.measures[] | select(.metric == "coverage").value // "N/A"')
           COMPLEXITY=$(echo $response | jq -r '.component.measures[] | select(.metric == "complexity").value // "N/A"')
           NCLOC=$(echo $response | jq -r '.component.measures[] | select(.metric == "ncloc").value // "N/A"')
@@ -65,6 +66,7 @@ jobs:
           RELIABILITY=$(echo $response | jq -r '.component.measures[] | select(.metric == "reliability_rating").value // "N/A"')
           MAINTAINABILITY=$(echo $response | jq -r '.component.measures[] | select(.metric == "sqale_rating").value // "N/A"')
 
+          # Generate summary
           echo "| Coverage             | $COVERAGE% | :white_check_mark: |" >> $GITHUB_STEP_SUMMARY
           echo "| Complexity           | $COMPLEXITY | :triangular_ruler: |" >> $GITHUB_STEP_SUMMARY
           echo "| Lines of Code        | $NCLOC | :scroll: |" >> $GITHUB_STEP_SUMMARY
