@@ -28,7 +28,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          pip install pytest pytest-cov selenium
+          pip install pytest pytest-cov selenium jq
 
       - name: Run Tests with Coverage
         run: |
