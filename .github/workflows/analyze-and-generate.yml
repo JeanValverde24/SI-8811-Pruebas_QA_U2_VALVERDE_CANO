@@ -40,16 +40,28 @@ jobs:
           name: coverage-report
           path: coverage/coverage.xml
 
+      - name: SonarCloud Scan
+        uses: sonarsource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.organization=jeanvalverde24
+            -Dsonar.projectKey=JeanValverde24_SI-8811-Pruebas_QA_U2_VALVERDE_CANO
+            -Dsonar.sources=TeamWebQaUPT
+            -Dsonar.python.coverage.reportPaths=coverage/coverage.xml
+            -Dsonar.inclusions=TeamWebQaUPT/webdriver_config.py,TeamWebQaUPT/utils.py
+
       - name: Fetch SonarCloud Metrics
         id: fetch-metrics
         run: |
           SONAR_API_URL="https://sonarcloud.io/api/measures/component"
           PROJECT_KEY="JeanValverde24_SI-8811-Pruebas_QA_U2_VALVERDE_CANO"
-          METRICS="bugs,vulnerabilities,code_smells,coverage,duplicated_lines_density,complexity,ncloc,cognitive_complexity,comment_lines_density,security_rating,reliability_rating,sqale_rating,development_cost,security_remediation_effort,reliability_remediation_effort,sqale_index,confirmed_issues,effort_to_reach_maintainability_rating_a"
+          METRICS="bugs,vulnerabilities,code_smells,coverage,duplicated_lines_density,complexity,ncloc,cognitive_complexity,comment_lines_density,security_rating,reliability_rating,sqale_rating"
 
           RESPONSE=$(curl -s -u $SONAR_TOKEN: "$SONAR_API_URL?component=$PROJECT_KEY&metricKeys=$METRICS")
           echo "SonarCloud API Response: $RESPONSE"
-
           echo "response=$RESPONSE" >> $GITHUB_ENV
 
       - name: Publish SonarCloud Metrics as Annotations
@@ -75,19 +87,6 @@ jobs:
           echo "| Maintainability      | $MAINTAINABILITY | :recycle: |" >> $GITHUB_STEP_SUMMARY
         env:
           response: ${{ env.response }}
-
-      - name: SonarCloud Scan
-        uses: sonarsource/sonarcloud-github-action@master
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          args: >
-            -Dsonar.organization=jeanvalverde24
-            -Dsonar.projectKey=JeanValverde24_SI-8811-Pruebas_QA_U2_VALVERDE_CANO
-            -Dsonar.sources=TeamWebQaUPT
-            -Dsonar.python.coverage.reportPaths=coverage/coverage.xml
-            -Dsonar.inclusions=TeamWebQaUPT/webdriver_config.py,TeamWebQaUPT/utils.py
 
   publish-package:
     name: Publish Package
