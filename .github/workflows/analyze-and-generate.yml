@@ -45,8 +45,8 @@ jobs:
         run: |
           SONAR_API_URL="https://sonarcloud.io/api/measures/component"
           PROJECT_KEY="JeanValverde24_SI-8811-Pruebas_QA_U2_VALVERDE_CANO"
-          METRICS="coverage,security_rating,reliability_rating"
-          RESPONSE=$(curl -s "$SONAR_API_URL?component=$PROJECT_KEY&metricKeys=$METRICS" -u $SONAR_TOKEN:)
+          METRICS="coverage,security_rating,reliability_rating,sqale_rating"
+          RESPONSE=$(curl -s -u $SONAR_TOKEN: "$SONAR_API_URL?component=$PROJECT_KEY&metricKeys=$METRICS")
           echo "response=$RESPONSE" >> $GITHUB_ENV
 
       - name: Publish SonarCloud Metrics as Annotations
@@ -57,9 +57,13 @@ jobs:
           COVERAGE=$(echo $response | jq -r '.component.measures[] | select(.metric == "coverage").value // "N/A"')
           SECURITY=$(echo $response | jq -r '.component.measures[] | select(.metric == "security_rating").value // "N/A"')
           RELIABILITY=$(echo $response | jq -r '.component.measures[] | select(.metric == "reliability_rating").value // "N/A"')
+          MAINTAINABILITY=$(echo $response | jq -r '.component.measures[] | select(.metric == "sqale_rating").value // "N/A"')
           echo "| Coverage             | $COVERAGE% |" >> $GITHUB_STEP_SUMMARY
           echo "| Security Rating      | $SECURITY |" >> $GITHUB_STEP_SUMMARY
           echo "| Reliability Rating   | $RELIABILITY |" >> $GITHUB_STEP_SUMMARY
+          echo "| Maintainability      | $MAINTAINABILITY |" >> $GITHUB_STEP_SUMMARY
+        env:
+          response: ${{ env.response }}
 
       - name: SonarCloud Scan
         uses: sonarsource/sonarcloud-github-action@master
