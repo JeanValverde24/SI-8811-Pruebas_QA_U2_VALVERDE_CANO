@@ -43,19 +43,27 @@ jobs:
       - name: Fetch SonarCloud Metrics
         id: fetch-metrics
         run: |
+          set -e
           SONAR_API_URL="https://sonarcloud.io/api/measures/component"
           PROJECT_KEY="JeanValverde24_SI-8811-Pruebas_QA_U2_VALVERDE_CANO"
           METRICS="bugs,vulnerabilities,code_smells,coverage,duplicated_lines_density,complexity,ncloc,cognitive_complexity,comment_lines_density,security_rating,reliability_rating,sqale_rating"
 
+          echo "Fetching SonarCloud Metrics..."
           RESPONSE=$(curl -s -u "$SONAR_TOKEN:" "$SONAR_API_URL?component=$PROJECT_KEY&metricKeys=$METRICS")
+
           echo "SonarCloud API Response: $RESPONSE"
 
           if [[ -z "$RESPONSE" || "$RESPONSE" == *"errors"* ]]; then
-            echo "Error fetching SonarCloud metrics. Please check the project key and SonarCloud API token."
+            echo "Error fetching SonarCloud metrics."
             exit 1
           fi
 
           echo "response=$RESPONSE" >> $GITHUB_ENV
+
+      - name: Debug SonarCloud Response
+        run: |
+          echo "Inspecting SonarCloud API response..."
+          echo $RESPONSE
 
       - name: Publish SonarCloud Metrics as Annotations
         run: |
