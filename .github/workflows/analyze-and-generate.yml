@@ -50,6 +50,7 @@ jobs:
 
           echo "Fetching SonarCloud Metrics..."
           RESPONSE=$(curl -s -u "$SONAR_TOKEN:" "$SONAR_API_URL?component=$PROJECT_KEY&metricKeys=$METRICS")
+
           echo "SonarCloud API Response: $RESPONSE"
 
           if [[ -z "$RESPONSE" || "$RESPONSE" == *"errors"* ]]; then
@@ -59,10 +60,12 @@ jobs:
 
           echo "response=$RESPONSE" >> $GITHUB_ENV
 
-      - name: Debug SonarCloud Response
+      - name: Debug SonarCloud API Call
         run: |
-          echo "Inspecting SonarCloud API response..."
-          echo ${{ env.response }}
+          echo "Debugging API Call..."
+          echo "Using Sonar Token: $SONAR_TOKEN"
+          echo "API URL: https://sonarcloud.io/api/measures/component?component=$PROJECT_KEY&metricKeys=$METRICS"
+          curl -v -u "$SONAR_TOKEN:" "https://sonarcloud.io/api/measures/component?component=$PROJECT_KEY&metricKeys=$METRICS"
 
       - name: Publish SonarCloud Metrics as Annotations
         run: |
@@ -70,12 +73,12 @@ jobs:
           echo "| Metric               | Value   | Icon       |" >> $GITHUB_STEP_SUMMARY
           echo "|----------------------|---------|------------|" >> $GITHUB_STEP_SUMMARY
 
-          COVERAGE=$(echo ${{ env.response }} | jq -r '.component.measures[] | select(.metric == "coverage").value // "N/A"')
-          COMPLEXITY=$(echo ${{ env.response }} | jq -r '.component.measures[] | select(.metric == "complexity").value // "N/A"')
-          NCLOC=$(echo ${{ env.response }} | jq -r '.component.measures[] | select(.metric == "ncloc").value // "N/A"')
-          SECURITY=$(echo ${{ env.response }} | jq -r '.component.measures[] | select(.metric == "security_rating").value // "N/A"')
-          RELIABILITY=$(echo ${{ env.response }} | jq -r '.component.measures[] | select(.metric == "reliability_rating").value // "N/A"')
-          MAINTAINABILITY=$(echo ${{ env.response }} | jq -r '.component.measures[] | select(.metric == "sqale_rating").value // "N/A"')
+          COVERAGE=$(echo $response | jq -r '.component.measures[] | select(.metric == "coverage").value // "N/A"')
+          COMPLEXITY=$(echo $response | jq -r '.component.measures[] | select(.metric == "complexity").value // "N/A"')
+          NCLOC=$(echo $response | jq -r '.component.measures[] | select(.metric == "ncloc").value // "N/A"')
+          SECURITY=$(echo $response | jq -r '.component.measures[] | select(.metric == "security_rating").value // "N/A"')
+          RELIABILITY=$(echo $response | jq -r '.component.measures[] | select(.metric == "reliability_rating").value // "N/A"')
+          MAINTAINABILITY=$(echo $response | jq -r '.component.measures[] | select(.metric == "sqale_rating").value // "N/A"')
 
           echo "| Coverage             | $COVERAGE% | :white_check_mark: |" >> $GITHUB_STEP_SUMMARY
           echo "| Complexity           | $COMPLEXITY | :triangular_ruler: |" >> $GITHUB_STEP_SUMMARY
