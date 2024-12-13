@@ -18,6 +18,8 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       - name: Setup Python
         uses: actions/setup-python@v4
@@ -27,6 +29,16 @@ jobs:
       - name: Install Dependencies
         run: |
           pip install pytest pytest-cov selenium jq
+
+      - name: Run Tests with Coverage
+        run: |
+          pytest --cov=TeamWebQaUPT --cov-report=xml:coverage/coverage.xml Tests/test_utils.py Tests/test_webdriver_config.py
+
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-report
+          path: coverage/coverage.xml
 
       - name: Fetch SonarCloud Metrics and Display
         id: fetch-metrics
@@ -46,23 +58,29 @@ jobs:
             exit 1
           fi
 
-          echo "## SonarCloud Metrics" >> $GITHUB_STEP_SUMMARY
-          echo "| Metric               | Value   |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------------------|---------|" >> $GITHUB_STEP_SUMMARY
+          echo "response=$RESPONSE" >> $GITHUB_ENV
 
-          echo $RESPONSE | jq -r '.component.measures[] | "| \(.metric) | \(.value) |"' >> $GITHUB_STEP_SUMMARY
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
-      - name: Run Tests with Coverage
+      - name: Publish SonarCloud Metrics as Annotations
         run: |
-          pytest --cov=TeamWebQaUPT --cov-report=xml:coverage/coverage.xml Tests/test_utils.py Tests/test_webdriver_config.py
+          echo "## SonarCloud Metrics" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric               | Value   | Icon       |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------------------|---------|------------|" >> $GITHUB_STEP_SUMMARY
 
-      - name: Upload Coverage Report
-        uses: actions/upload-artifact@v3
-        with:
-          name: coverage-report
-          path: coverage/coverage.xml
+          echo $RESPONSE | jq -r '.component.measures[] | 
+          if .metric == "coverage" then "| Coverage             | \(.value)% | :white_check_mark: |" 
+          elif .metric == "complexity" then "| Complexity           | \(.value) | :triangular_ruler: |" 
+          elif .metric == "ncloc" then "| Lines of Code        | \(.value) | :scroll: |" 
+          elif .metric == "security_rating" then "| Security Rating      | \(.value) | :shield: |" 
+          elif .metric == "reliability_rating" then "| Reliability Rating   | \(.value) | :tools: |" 
+          elif .metric == "sqale_rating" then "| Maintainability      | \(.value) | :recycle: |" 
+          elif .metric == "code_smells" then "| Code Smells          | \(.value) | :nose: |" 
+          elif .metric == "duplicated_lines_density" then "| Duplications         | \(.value)% | :twisted_rightwards_arrows: |" 
+          elif .metric == "cognitive_complexity" then "| Cognitive Complexity | \(.value) | :brain: |" 
+          elif .metric == "bugs" then "| Bugs                 | \(.value) | :bug: |" 
+          elif .metric == "comment_lines_density" then "| Comment Density      | \(.value)% | :speech_balloon: |" 
+          else empty end' >> $GITHUB_STEP_SUMMARY
+        env:
+          RESPONSE: ${{ env.response }}
 
       - name: SonarCloud Scan
         uses: sonarsource/sonarcloud-github-action@master
