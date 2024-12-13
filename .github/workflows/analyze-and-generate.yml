@@ -52,16 +52,16 @@ jobs:
       - name: Publish SonarCloud Metrics as Annotations
         run: |
           echo "## SonarCloud Metrics" >> $GITHUB_STEP_SUMMARY
-          echo "| Metric               | Value   |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------------------|---------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric               | Value   | Icon |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------------------|---------|------|" >> $GITHUB_STEP_SUMMARY
           COVERAGE=$(echo $response | jq -r '.component.measures[] | select(.metric == "coverage").value // "N/A"')
           SECURITY=$(echo $response | jq -r '.component.measures[] | select(.metric == "security_rating").value // "N/A"')
           RELIABILITY=$(echo $response | jq -r '.component.measures[] | select(.metric == "reliability_rating").value // "N/A"')
           MAINTAINABILITY=$(echo $response | jq -r '.component.measures[] | select(.metric == "sqale_rating").value // "N/A"')
-          echo "| Coverage             | $COVERAGE% |" >> $GITHUB_STEP_SUMMARY
-          echo "| Security Rating      | $SECURITY |" >> $GITHUB_STEP_SUMMARY
-          echo "| Reliability Rating   | $RELIABILITY |" >> $GITHUB_STEP_SUMMARY
-          echo "| Maintainability      | $MAINTAINABILITY |" >> $GITHUB_STEP_SUMMARY
+          echo "| Coverage             | $COVERAGE% | :white_check_mark: |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security Rating      | $SECURITY | :shield: |" >> $GITHUB_STEP_SUMMARY
+          echo "| Reliability Rating   | $RELIABILITY | :tools: |" >> $GITHUB_STEP_SUMMARY
+          echo "| Maintainability      | $MAINTAINABILITY | :recycle: |" >> $GITHUB_STEP_SUMMARY
         env:
           response: ${{ env.response }}
 
