@@ -46,20 +46,25 @@ jobs:
           SONAR_API_URL="https://sonarcloud.io/api/measures/component"
           PROJECT_KEY="JeanValverde24_SI-8811-Pruebas_QA_U2_VALVERDE_CANO"
           METRICS="coverage,complexity,ncloc,security_rating,reliability_rating,sqale_rating"
+
           RESPONSE=$(curl -s -u $SONAR_TOKEN: "$SONAR_API_URL?component=$PROJECT_KEY&metricKeys=$METRICS")
+          echo "SonarCloud Response: $RESPONSE"
+
           echo "response=$RESPONSE" >> $GITHUB_ENV
 
       - name: Publish SonarCloud Metrics as Annotations
         run: |
           echo "## SonarCloud Metrics" >> $GITHUB_STEP_SUMMARY
-          echo "| Metric               | Value   | Icon |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------------------|---------|------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric               | Value   | Icon       |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------------------|---------|------------|" >> $GITHUB_STEP_SUMMARY
+
           COVERAGE=$(echo $response | jq -r '.component.measures[] | select(.metric == "coverage").value // "N/A"')
           COMPLEXITY=$(echo $response | jq -r '.component.measures[] | select(.metric == "complexity").value // "N/A"')
           NCLOC=$(echo $response | jq -r '.component.measures[] | select(.metric == "ncloc").value // "N/A"')
           SECURITY=$(echo $response | jq -r '.component.measures[] | select(.metric == "security_rating").value // "N/A"')
           RELIABILITY=$(echo $response | jq -r '.component.measures[] | select(.metric == "reliability_rating").value // "N/A"')
           MAINTAINABILITY=$(echo $response | jq -r '.component.measures[] | select(.metric == "sqale_rating").value // "N/A"')
+
           echo "| Coverage             | $COVERAGE% | :white_check_mark: |" >> $GITHUB_STEP_SUMMARY
           echo "| Complexity           | $COMPLEXITY | :triangular_ruler: |" >> $GITHUB_STEP_SUMMARY
           echo "| Lines of Code        | $NCLOC | :scroll: |" >> $GITHUB_STEP_SUMMARY
